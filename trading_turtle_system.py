@@ -1,6 +1,5 @@
 #%%%%%%%%%%%%%%%%    Setting up    %%%%%%%%%%%%%
 import sys
-sys.path.insert(0, r'D:\Python Projects\backtest_pkg')
 import backtest_pkg as bt 
 import pandas as pd 
 
@@ -39,7 +38,7 @@ exit_window = 20
 daily_limit = 1
 
 ohlc = price_data.copy()
-total_amount = 10**6
+total_cap = 10**6
 
 # Calculate unit size:
 price_data['pre_close'] = price_data.close.shift(1)
@@ -49,7 +48,7 @@ daily_range_ts = pd.DataFrame(dict(
     pre_low =  price_data.pre_close - price_data.low
 )).max(axis=1)
 smooth_range_ts = daily_range_ts.ewm(alpha = alpha).mean()
-unit_ts = 0.1*total_amount/price_data['smooth_range']
+unit_ts = 0.01*total_cap/smooth_range_ts
 
 # Data for entry signal:
 long_entry_df = pd.DataFrame()
@@ -59,40 +58,13 @@ short_entry_df = pd.DataFrame()
 for i in range(n):
     short_entry_df[f'short_breakout{i}'] = ohlc['low'].rolling(window=entry_window).min() - i*step*smooth_range_ts
 
-# price_data['long_breakout0'] = price_data['high'].rolling(window=55).max()
-# price_data['long_breakout1'] = price_data['long_breakout0'] + 0.5*price_data['smooth_range']
-# price_data['long_breakout2'] = price_data['long_breakout0'] + 1.0*price_data['smooth_range']
-# price_data['long_breakout3'] = price_data['long_breakout0'] + 1.5*price_data['smooth_range']
-
-# price_data['short_breakout0'] = price_data['low'].rolling(window=55).min()
-# price_data['short_breakout1'] = price_data['short_breakout0'] - 0.5*price_data['smooth_range']
-# price_data['short_breakout2'] = price_data['short_breakout0'] - 1.0*price_data['smooth_range']
-# price_data['short_breakout3'] = price_data['short_breakout0'] - 1.5*price_data['smooth_range']
-
 # Data for stop signal:
 long_stop_df = long_entry_df.sub(lose_buffer*smooth_range_ts, axis='index')
 short_stop_df = short_entry_df.add(lose_buffer*smooth_range_ts, axis='index')
 
-# price_data['long_stop0'] = price_data['long_breakout0'] - 2*price_data['smooth_range']
-# price_data['long_stop1'] = price_data['long_breakout1'] - 2*price_data['smooth_range']
-# price_data['long_stop2'] = price_data['long_breakout2'] - 2*price_data['smooth_range']
-# price_data['long_stop3'] = price_data['long_breakout3'] - 2*price_data['smooth_range']
-
-# price_data['short_stop0'] = price_data['short_breakout0'] + 2*price_data['smooth_range']
-# price_data['short_stop1'] = price_data['short_breakout1'] + 2*price_data['smooth_range']
-# price_data['short_stop2'] = price_data['short_breakout2'] + 2*price_data['smooth_range']
-# price_data['short_stop3'] = price_data['short_breakout3'] + 2*price_data['smooth_range']
-
 # Data for exit signal:
 long_exit_df = pd.concat([ohlc['low'].rolling(window= exit_window).min().to_frame()]*4, axis=1 )
 short_exit_df = pd.concat([ohlc['high'].rolling(window= exit_window).max().to_frame()]*4, axis=1 )
-
-# price_data['long_exit'] = price_data['low'].rolling(window=20).min()
-# price_data['short_exit'] = price_data['high'].rolling(window=20).max()
-
-pit_data = price_data.shift(1)
-# display(ohlc.iloc[-1, :])
-# pit_data.iloc[-1, :]
 
 lag = 1 # Lag of data available, on T, only T-lag data available
 # Input data for a strategy:
@@ -114,7 +86,7 @@ strategy = dict(
 )
 
 
-#%%%%%%%%%%%%%%%%%%    Template  Function   %%%%%%%%%%%%%%%%%
+#%%%%%%%%%%%%%%%%%%    Template Backtest Function   %%%%%%%%%%%%%%%%%
 def backtest_strategy(
     ticker, period, ohlc_df, n, unit_ts, 
     long_entry_df, long_stop_df, long_exit_df, 
@@ -149,11 +121,6 @@ def backtest_strategy(
     market = bt.market()
     market.add_stock(ticker, ohlc_df)
     trading_sys = bt.trading_system()
-
-    # status_log = [f'Initial: {status_name[current_status]}']
-    # action_log = []
-    # holding_df = pd.DataFrame(columns=['Cash', ticker])
-    # pnl_ts = pd.Series()
 
     # Actual execution:
     for date in period:
@@ -293,21 +260,14 @@ def backtest_strategy(
     return log_df
 
 
-# %%%%%%%%%      Analyzing the strategy      %%%%%%%
-
+# %%%%%%%%%      Backtesting the strategy      %%%%%%%
 log_df = backtest_strategy(**strategy)
 log_df['Price'] = ohlc.close
 log_df['Total Value'] = log_df['Cash'] +log_df[ticker]*log_df['Price']
 log_df['Total Value'].plot(title=f'{ticker} PnL')
-pd.concat([log_df, pit_data], axis=1).to_csv('temp.csv')
 
-#%%%%%%%%%%%%%%%%%
-# expected_df = pd.read_csv('temp_old.csv', index_col=0, parse_dates=True)
-# expected_df = expected_df.loc[log_df.index, :]
-# (expected_df['Total Value'] - log_df['Total Value']).abs().sum()
 
 #%%%%%%%%%%%%%     Yearly performance     %%%%%%%%%%%%%%%%%%%%%%
-pd.concat([log_df, pit_data], axis=1).to_csv('temp.csv')
 
 # What is the performance each year:
 year_end_value =log_df.resample('Y')['Total Value'].agg('last')
@@ -320,9 +280,11 @@ record_df = pd.DataFrame(0, index=[bt_period[0]], columns=['Cash'])
 record_df = pd.concat([record_df, temp[['Cash']] ])
 record_df['PnL'] = record_df['Cash'].diff()
 win_prob = sum(record_df.PnL>0)/record_df.shape[0]
+
+
 print(f'Win probability: {win_prob:.2%}')
 print('Yearly PnL:')
-year_pnl
+print(year_pnl)
 
 
 

@@ -2,8 +2,8 @@
 from pandas_datareader import DataReader
 
 universe = [
-    # 'MMM', 'T', 'FB',  # Stocks
-    'SPY', 'QQQ', 'VMBS',  # ETF
+    'MMM', 'ABBV', 'FB', 'T', 'GOOGL',  # Stocks
+    # 'SPY', 'QQQ', 'VMBS',  # ETF
     # 'ZB=F', 'GC=F','SI=F', 'C=F', 'CL=F',  # Futures
     # 'EURUSD=X', 'GBPUSD=X', 'HKDUSD=X', 'JPY=X',  # FX
     # 'BTCUSD=X', 'ETHUSD=X'   # Cypto
@@ -20,4 +20,3 @@ for ticker in universe:
     price_data.xs(ticker, level = 'Symbols', axis=1).to_csv(f'Yahoo Data/{ticker}.csv')
 
 
-# %%
