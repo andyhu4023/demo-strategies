@@ -1,10 +1,12 @@
 #%%%%%%%%%%%%%%%%%   Settings    %%%%%%%%%%%%%%%%%%
+
 import backtest_pkg as bt 
 import pandas as pd 
+from datetime import datetime
 
 universe = ['MMM', 'ABBV', 'FB', 'T', 'GOOGL']
-start = pd.datetime(2018, 12, 31)
-end = pd.datetime(2019, 12, 31)
+start = datetime(2018, 12, 31)
+end = datetime(2019, 12, 31)
 
 
 #%%%%%%%%%%%%   Load adjusted price data    %%%%%%%%%%%%% 
@@ -28,5 +30,5 @@ benchmark = pd.DataFrame(1, index= port_weight.index, columns=port_weight.column
 
 # Backtest process:
 portfolio = bt.portfolio(weight=port_weight, name='Rating portfolio', benchmark=benchmark, benchmark_name='Equal Weight', end_date=end, price=price_data)
-
 bt_result = portfolio.backtest(plot=True)
+print(bt_result)
